@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../theme/app_theme.dart';
 import '../services/recommendations_service.dart';
+import '../utils/text_formatter.dart';
 
 class RecommendationsScreen extends StatefulWidget {
   const RecommendationsScreen({super.key});
@@ -325,6 +326,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
             bottomRight: Radius.circular(14),
           );
 
+    // Preprocess the text to handle Flowise formatting
+    final processedText = TextFormatter.preprocessText(text);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -346,14 +350,21 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                 borderRadius: radius,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Text(
-                text,
-                style: GoogleFonts.inter(
-                  color: fg,
-                  fontSize: 14,
-                ),
-                textAlign: isUser ? TextAlign.right : TextAlign.left,
-              ),
+              child: isUser 
+                ? Text(
+                    processedText,
+                    style: GoogleFonts.inter(
+                      color: fg,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.right,
+                  )
+                : TextFormatter.createFormattedText(
+                    processedText,
+                    textColor: fg,
+                    fontSize: 14,
+                    textAlign: TextAlign.left,
+                  ),
             ),
           ),
           if (isUser) const SizedBox(width: 8),
