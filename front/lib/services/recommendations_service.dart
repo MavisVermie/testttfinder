@@ -12,17 +12,13 @@ class RecommendationsService {
   Future<Map<String, dynamic>> getPersonalized({
     required String userMessage,
     required String chatflowId,
+    List<Map<String, String>>? chatHistory,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/recommendations/personalized');
     final payload = <String, dynamic>{
-      'location': userMessage, // Use userMessage as location for now
+      'userMessage': userMessage,
       'chatflowId': chatflowId,
-      'interests': <String>[],
-      'budget': 'medium',
-      'preferences': <String, dynamic>{},
-      'duration': '1 week',
-      'travelStyle': 'tourist',
-      'dietaryRestrictions': <String>[],
+      'chatHistory': chatHistory ?? <Map<String, String>>[],
     };
     final res = await _client.post(
       uri,

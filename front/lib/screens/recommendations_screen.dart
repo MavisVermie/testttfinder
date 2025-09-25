@@ -85,6 +85,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
       final result = await _service.getPersonalized(
         userMessage: text,
         chatflowId: chatflowId,
+        chatHistory: _messages,
       );
 
       if (!mounted) return;

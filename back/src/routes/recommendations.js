@@ -7,14 +7,15 @@ const recommendationsService = new RecommendationsService();
 
 // Validation schemas
 const personalizedRecommendationsSchema = Joi.object({
-  location: Joi.string().min(2).max(100).required(),
-  interests: Joi.array().items(Joi.string().min(2).max(50)).optional().default([]),
-  budget: Joi.string().valid('low', 'medium', 'high', 'luxury').optional().default('medium'),
-  preferences: Joi.object().optional().default({}),
-  duration: Joi.string().min(3).max(50).optional().default('1 week'),
-  travelStyle: Joi.string().valid('backpacker', 'family', 'business', 'luxury', 'tourist', 'adventure').optional().default('tourist'),
-  dietaryRestrictions: Joi.array().items(Joi.string().min(2).max(50)).optional().default([]),
-  chatflowId: Joi.string().required()
+  userMessage: Joi.string().min(1).max(1000).required(),
+  chatflowId: Joi.string().required(),
+  chatHistory: Joi.array().items(
+    Joi.object({
+      role: Joi.string().valid('user', 'ai', 'assistant').required(),
+      text: Joi.string().optional(),
+      content: Joi.string().optional()
+    }).or('text', 'content')
+  ).optional().default([])
 });
 
 const culturalEtiquetteSchema = Joi.object({
@@ -38,19 +39,14 @@ const comprehensiveRecommendationsSchema = Joi.object({
 
 /**
  * POST /api/recommendations/personalized
- * Get personalized travel recommendations based on location, interests, budget, and preferences
+ * Get personalized travel recommendations based on user message and chat history
  */
 router.post('/personalized', async (req, res) => {
   try {
     const {
-      location,
-      interests,
-      budget,
-      preferences,
-      duration,
-      travelStyle,
-      dietaryRestrictions,
-      chatflowId
+      userMessage,
+      chatflowId,
+      chatHistory
     } = req.body;
 
     // Validate input
