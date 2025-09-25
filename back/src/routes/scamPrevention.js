@@ -5,6 +5,9 @@ const FlowiseService = require('../services/flowiseService');
 const router = express.Router();
 const flowiseService = new FlowiseService();
 
+// Get default chatflow ID from environment
+const DEFAULT_PRICE_ADVISOR_CHATFLOW_ID = process.env.DEFAULT_PRICE_ADVISOR_CHATFLOW_ID || '07afcffe-f864-4a73-8a28-9cbf096919e5';
+
 // Validation schemas
 const priceAdviceSchema = Joi.object({
   item: Joi.string().min(1).max(200).required(),
@@ -259,17 +262,8 @@ router.post('/test', async (req, res) => {
   try {
     const { 
       testType = 'price',
-      chatflowId 
+      chatflowId = DEFAULT_PRICE_ADVISOR_CHATFLOW_ID
     } = req.body;
-
-    // Validate required fields
-    if (!chatflowId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields',
-        message: 'chatflowId is required for testing'
-      });
-    }
 
     let testMessage;
     let testData;

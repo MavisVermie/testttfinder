@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/price_advisor_service.dart';
+import '../config/api_config.dart';
 
 class PriceAdvisorScreen extends StatefulWidget {
   const PriceAdvisorScreen({super.key});
@@ -10,9 +12,11 @@ class PriceAdvisorScreen extends StatefulWidget {
 }
 
 class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
-  final TextEditingController _cityController = TextEditingController(text: 'Enter name city');
-  final TextEditingController _itemController = TextEditingController(text: 'Enter name item');
-  final List<Map<String, String>> _savedItems = [];
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _itemController = TextEditingController();
+  bool _isLoading = false;
+  String? _priceAdvice;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -21,8 +25,9 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
     super.dispose();
   }
 
-  void _checkPrice() {
-    if (_cityController.text.trim().isEmpty || _itemController.text.trim().isEmpty) {
+  Future<void> _checkPrice() async {
+    if (_cityController.text.trim().isEmpty || 
+        _itemController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter both city and item'),
@@ -31,41 +36,36 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
       return;
     }
 
-    // Simulate price check
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Price Check'),
-        content: Text('Checking prices for ${_itemController.text} in ${_cityController.text}...'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _saveItem() {
-    if (_cityController.text.trim().isEmpty || _itemController.text.trim().isEmpty) {
-      return;
-    }
-
     setState(() {
-      _savedItems.add({
-        'city': _cityController.text.trim(),
-        'item': _itemController.text.trim(),
-      });
+      _isLoading = true;
+      _errorMessage = null;
+      _priceAdvice = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Item saved successfully!'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    try {
+      final result = await PriceAdvisorService.getSafetyAdvice(
+        query: 'What are typical prices for ${_itemController.text.trim()} in ${_cityController.text.trim()}? Please provide price ranges and advice on fair pricing.',
+        location: _cityController.text.trim(),
+        chatflowId: ApiConfig.defaultPriceAdvisorChatflowId,
+        adviceType: 'price',
+      );
+
+      setState(() {
+        _isLoading = false;
+        if (result['success']) {
+          _priceAdvice = result['data']['data']['advice'] ?? 'No advice available';
+        } else {
+          _errorMessage = result['error'] ?? 'Failed to get price advice';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error: ${e.toString()}';
+      });
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +130,7 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Enter a city and item to check typical prices.',
+                            'Enter a city and item to get price advice and typical market rates.',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               color: AppTheme.textSecondary,
@@ -151,6 +151,7 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                           TextFormField(
                             controller: _cityController,
                             decoration: InputDecoration(
+                              hintText: 'Enter city name',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(color: Colors.grey[300]!),
@@ -181,6 +182,7 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                           TextFormField(
                             controller: _itemController,
                             decoration: InputDecoration(
+                              hintText: 'Enter item name',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(color: Colors.grey[300]!),
@@ -202,18 +204,27 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: _checkPrice,
-                              icon: const Icon(Icons.search, color: Colors.white),
-                              label: const Text(
-                                'Check Price',
-                                style: TextStyle(
+                              onPressed: _isLoading ? null : _checkPrice,
+                              icon: _isLoading 
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Icon(Icons.search, color: Colors.white),
+                              label: Text(
+                                _isLoading ? 'Checking...' : 'Check Price',
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: accentBlue,
+                                backgroundColor: _isLoading ? Colors.grey : accentBlue,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -226,6 +237,72 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                       ),
                     ),
                   ),
+
+                  // Price Advice Display Section
+                  if (_priceAdvice != null || _errorMessage != null) ...[
+                    const SizedBox(height: 20),
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Price Advice',
+                              style: GoogleFonts.inter(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (_priceAdvice != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.green[200]!),
+                                ),
+                                child: Text(
+                                  _priceAdvice!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.green[800],
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (_errorMessage != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.red[200]!),
+                                ),
+                                child: Text(
+                                  _errorMessage!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.red[800],
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
 
                 ],
               ),
