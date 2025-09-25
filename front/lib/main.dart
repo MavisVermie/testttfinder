@@ -9,6 +9,7 @@ import 'screens/transportation_screen.dart';
 import 'screens/currency_converter_screen.dart';
 import 'screens/match_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/map_test_screen.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/auth_wrapper.dart';
@@ -46,6 +47,7 @@ class MyApp extends StatelessWidget {
         '/match': (context) => const MatchScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/edit-account': (context) => const EditAccountScreen(),
+        '/map-test': (context) => const MapTestScreen(),
         '/login': (context) => const TravelLoginPage(),
       },
     );
