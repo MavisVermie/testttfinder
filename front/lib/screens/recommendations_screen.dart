@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../theme/app_theme.dart';
+import '../services/recommendations_service.dart';
 
 class RecommendationsScreen extends StatefulWidget {
   const RecommendationsScreen({super.key});
@@ -13,35 +16,16 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
+  final RecommendationsService _service = RecommendationsService();
 
-  // Mock chat history (no backend)
-  final List<Map<String, String>> _messages = [
-    {
-      'role': 'ai',
-      'text': 'Hi! I\'m your travel assistant. Tell me your destination and vibe.'
-    },
-    {
-      'role': 'user',
-      'text': '3 days in Tokyo. Culture + food, mid budget.'
-    },
-    {
-      'role': 'ai',
-      'text': 'Great choice! Want a balanced plan with 2 highlights/day and evening food spots?'
-    },
-  ];
+  // Chat history (dynamic, filled by user/AI messages)
+  List<Map<String, String>> _messages = [];
 
-  // Mock Do & Don\'t (AI-generated look, no backend)
-  final List<String> _dos = [
-    'Carry cash for small eateries',
-    'Learn basic greetings (ohayou, arigatou)',
-    'Reserve popular ramen spots in advance',
-  ];
-
-  final List<String> _donts = [
-    'Don\'t eat while walking in shrines',
-    'Don\'t speak loudly on trains',
-    'Don\'t tip (not customary)',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadChatHistory();
+  }
 
   @override
   void dispose() {
@@ -50,7 +34,36 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  // Load chat history from SharedPreferences
+  Future<void> _loadChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? chatHistoryJson = prefs.getString('recommendations_chat_history');
+      if (chatHistoryJson != null) {
+        final List<dynamic> chatHistoryList = json.decode(chatHistoryJson);
+        setState(() {
+          _messages = chatHistoryList
+              .map((item) => Map<String, String>.from(item))
+              .toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading chat history: $e');
+    }
+  }
+
+  // Save chat history to SharedPreferences
+  Future<void> _saveChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String chatHistoryJson = json.encode(_messages);
+      await prefs.setString('recommendations_chat_history', chatHistoryJson);
+    } catch (e) {
+      print('Error saving chat history: $e');
+    }
+  }
+
+  void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _isTyping) return;
 
@@ -60,39 +73,87 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
       _isTyping = true;
     });
 
-    // Mock AI response delay and content
-    Future.delayed(const Duration(milliseconds: 800), () {
+    // Save chat history after adding user message
+    _saveChatHistory();
+    _scrollToBottom();
+
+    try {
+      // Using the dedicated AI chat API for recommendations
+      const chatflowId = '32547d3e-ba39-4604-a904-da0c516e17b1';
+
+      final result = await _service.getPersonalized(
+        userMessage: text,
+        chatflowId: chatflowId,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        final data = (result['data'] as Map<String, dynamic>? ?? <String, dynamic>{});
+        final recs = data['recommendations'];
+        String reply;
+        
+        if (recs is Map<String, dynamic>) {
+          // Handle structured response - check multiple possible response fields
+          final rawResponse = recs['rawResponse']?.toString() ?? '';
+          final contentResponse = recs['content']?.toString() ?? '';
+          final textResponse = recs['text']?.toString() ?? 
+                             recs['answer']?.toString() ?? 
+                             recs['response']?.toString() ?? '';
+          
+          if (rawResponse.isNotEmpty) {
+            reply = rawResponse;
+          } else if (contentResponse.isNotEmpty) {
+            reply = contentResponse;
+          } else if (textResponse.isNotEmpty) {
+            reply = textResponse;
+          } else {
+            // If no specific response field found, try to get any string value
+            final anyResponse = recs.values
+                .where((value) => value is String && value.isNotEmpty)
+                .cast<String>()
+                .firstOrNull ?? '';
+            reply = anyResponse.isNotEmpty ? anyResponse : 'I understand your request. Let me provide you with some personalized travel recommendations!';
+          }
+        } else if (recs is String) {
+          reply = recs;
+        } else if (recs != null) {
+          reply = recs.toString();
+        } else {
+          reply = 'I understand your request. Let me provide you with some personalized travel recommendations!';
+        }
+        
+        setState(() {
+          _messages.add({'role': 'ai', 'text': reply});
+          _isTyping = false;
+        });
+        // Save chat history after AI response
+        _saveChatHistory();
+      } else {
+        final message = result['message']?.toString() ?? 
+                       result['error']?.toString() ?? 
+                       'Sorry, I encountered an issue while processing your request. Please try again.';
+        setState(() {
+          _messages.add({'role': 'ai', 'text': '🤖 $message'});
+          _isTyping = false;
+        });
+        // Save chat history after error response
+        _saveChatHistory();
+      }
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.add({
-          'role': 'ai',
-          'text': _generateMockReply(text),
-        });
+        _messages.add({'role': 'ai', 'text': '🤖 Sorry, I encountered a technical issue. Please check your internet connection and try again.'});
         _isTyping = false;
       });
+      // Save chat history after error
+      _saveChatHistory();
+    } finally {
       _scrollToBottom();
-    });
-
-    _scrollToBottom();
+    }
   }
 
-  String _generateMockReply(String userText) {
-    // Very simple heuristic for mock replies
-    final lower = userText.toLowerCase();
-    if (lower.contains('food') || lower.contains('eat')) {
-      return 'For food lovers: try a lunch market crawl, an izakaya near your hotel, and 1 signature spot. Want me to add a vegetarian option?';
-    }
-    if (lower.contains('budget') || lower.contains('cheap') || lower.contains('mid')) {
-      return 'Let\'s keep it mid-budget: free morning sights + paid afternoon highlight, then affordable dinner streets. Shall I draft a 3-day plan?';
-    }
-    if (lower.contains('museum') || lower.contains('culture')) {
-      return 'Culture-forward plan: morning museum, afternoon neighborhood walk, evening tea house. Add a temple stop too?';
-    }
-    if (lower.contains('tokyo')) {
-      return 'Tokyo snapshot: Asakusa + Ueno day, Shibuya food night, and a Meiji Shrine morning. Need transit tips?';
-    }
-    return 'Got it. I can propose a paced daily plan with 2-3 must-dos and nearby food. Want me to group by area to cut transit time?';
-  }
+  // Removed mock reply generator now that backend is wired
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -185,9 +246,6 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   ),
 
                   const SizedBox(height: 12),
-
-                  // Do & Don't at the end after chat
-                  _buildDoDontCard(),
                 ],
               ),
             ),
@@ -366,106 +424,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     );
   }
 
-  Widget _buildDoDontCard() {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.rule_rounded, color: AppTheme.primaryOrange),
-                const SizedBox(width: 8),
-                Text(
-                  'Quick Do & Don\'t (mock AI)',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Do',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      ..._dos.map((d) => _bullet(d)).toList(),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Don\'t',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryOrange,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      ..._donts.map((d) => _bullet(d)).toList(),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _bullet(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            margin: const EdgeInsets.only(top: 6, right: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.textSecondary,
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed mock Do & Don't card and bullets
 
   Widget _blob(double size, Color color) {
     return Container(
