@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/translation_service.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class TranslationScreen extends StatefulWidget {
   const TranslationScreen({super.key});
@@ -12,9 +14,13 @@ class TranslationScreen extends StatefulWidget {
 class _TranslationScreenState extends State<TranslationScreen> {
   final TextEditingController _inputController = TextEditingController();
   final TextEditingController _outputController = TextEditingController(text: '');
+  final TranslationService _service = TranslationService();
+  final AudioPlayer _player = AudioPlayer();
 
   String _fromLang = 'English';
   String _toLang = 'Spanish';
+  bool _isTranslating = false;
+  bool _isSpeaking = false;
 
   final List<String> _languages = const [
     'English',
@@ -35,7 +41,133 @@ class _TranslationScreenState extends State<TranslationScreen> {
   void dispose() {
     _inputController.dispose();
     _outputController.dispose();
+    _player.dispose();
     super.dispose();
+  }
+
+  String _nameToCode(String name) {
+    switch (name) {
+      case 'English':
+        return 'en';
+      case 'Spanish':
+        return 'es';
+      case 'French':
+        return 'fr';
+      case 'German':
+        return 'de';
+      case 'Italian':
+        return 'it';
+      case 'Portuguese':
+        return 'pt';
+      case 'Chinese':
+        return 'zh';
+      case 'Japanese':
+        return 'ja';
+      case 'Korean':
+        return 'ko';
+      case 'Arabic':
+        return 'ar';
+      case 'Russian':
+        return 'ru';
+      case 'Hindi':
+        return 'hi';
+      default:
+        return 'auto';
+    }
+  }
+
+  Future<void> _handleTranslate() async {
+    final String text = _inputController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _isTranslating = true;
+      _outputController.text = '';
+    });
+
+    try {
+      final String fromCode = _nameToCode(_fromLang);
+      final String toCode = _nameToCode(_toLang);
+      final String translated = await _service.translateText(
+        text: text,
+        sourceLanguageCode: fromCode,
+        targetLanguageCode: toCode,
+      );
+      setState(() {
+        _outputController.text = translated;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTranslating = false;
+        });
+      }
+    }
+  }
+
+  String _ttsCodeForLanguageName(String name) {
+    switch (name) {
+      case 'English':
+        return 'en-US';
+      case 'Spanish':
+        return 'es-ES';
+      case 'French':
+        return 'fr-FR';
+      case 'German':
+        return 'de-DE';
+      case 'Italian':
+        return 'it-IT';
+      case 'Portuguese':
+        return 'pt-PT';
+      case 'Chinese':
+        return 'zh-CN';
+      case 'Japanese':
+        return 'ja-JP';
+      case 'Korean':
+        return 'ko-KR';
+      case 'Arabic':
+        return 'ar-XA';
+      case 'Russian':
+        return 'ru-RU';
+      case 'Hindi':
+        return 'hi-IN';
+      default:
+        return 'en-US';
+    }
+  }
+
+  Future<void> _handleSpeakOutput() async {
+    final String text = _outputController.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      _isSpeaking = true;
+    });
+    try {
+      final String languageCode = _ttsCodeForLanguageName(_toLang);
+      final bytes = await _service.textToSpeech(
+        text: text,
+        languageCode: languageCode,
+        audioFormat: 'mp3',
+      );
+      await _player.stop();
+      await _player.play(BytesSource(bytes));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('TTS error: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+        });
+      }
+    }
   }
 
   void _swapLanguages() {
@@ -234,8 +366,14 @@ class _TranslationScreenState extends State<TranslationScreen> {
                             Row(
                               children: [
                                 ElevatedButton(
-                                  onPressed: () {},
-                                  child: const Text('Translate'),
+                                  onPressed: _isTranslating ? null : _handleTranslate,
+                                  child: _isTranslating
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Text('Translate'),
                                 ),
                               ],
                             )
@@ -268,7 +406,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
                                 const Spacer(),
                                 IconButton(
                                   tooltip: 'Listen',
-                                  onPressed: () {},
+                                  onPressed: _isSpeaking ? null : _handleSpeakOutput,
                                   icon: const Icon(Icons.volume_up_outlined),
                                 ),
                                 IconButton(

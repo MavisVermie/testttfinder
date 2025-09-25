@@ -1,0 +1,1 @@
+ C:\\Users\\Wel\\OneDrive\\Documents\\GitHub\\testttfinder\\front\\.dart_tool\\flutter_build\\5a7d77af7045e9a7496da0dfa3d85f3f\\native_assets.json: 

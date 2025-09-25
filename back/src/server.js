@@ -1,3 +1,5 @@
+// server.js (merged)
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -6,6 +8,20 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+/* -------------------------- Process-level safeguards -------------------------- */
+// Handle unhandled promise rejections to prevent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Intentionally do not exit; just log
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Intentionally do not exit; just log
+});
+
+/* --------------------------------- Routes --------------------------------- */
 const translationRoutes = require('./routes/translation');
 const transportationRoutes = require('./routes/transportation');
 const recommendationsRoutes = require('./routes/recommendations');
@@ -21,20 +37,52 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 
 // CORS
+const devAllowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5500',
+];
+
+const prodAllowedOrigins = (() => {
+  // Allow comma-separated list via env, else fallback
+  if (process.env.FRONTEND_ORIGINS) {
+    return process.env.FRONTEND_ORIGINS.split(',').map((s) => s.trim());
+  }
+  return ['https://your-frontend-domain.com'];
+})();
+
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? ['https://your-frontend-domain.com']
-        : ['http://localhost:3000', 'http://localhost:3001'],
+    origin: (origin, callback) => {
+      // Allow same-origin / non-browser like curl/postman (no Origin header)
+      if (!origin) return callback(null, true);
+
+      if (process.env.NODE_ENV === 'production') {
+        return prodAllowedOrigins.includes(origin)
+          ? callback(null, true)
+          : callback(new Error('Not allowed by CORS'));
+      }
+
+      // Development: allow common localhost origins and file:// (null origin string some tools send)
+      if (origin === 'null' || devAllowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Fallback in non-production: allow anything to ease local dev
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs:
-    parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 min
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 min
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
   message: {
     error: 'Too many requests from this IP, please try again later.',
@@ -53,8 +101,7 @@ app.use(compression());
 // Logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-/* --------------------------------- Routes -------------------------------- */
-
+/* --------------------------------- Routes --------------------------------- */
 app.use('/api/translation', translationRoutes);
 app.use('/api/transportation', transportationRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
@@ -62,7 +109,6 @@ app.use('/api/scam-prevention', scamPreventionRoutes);
 app.use('/api/currency', currencyRoutes);
 
 /* ------------------------------- Root Index ------------------------------- */
-
 app.get('/', (req, res) => {
   res.json({
     message: 'AI Travel Assistant API',
@@ -74,6 +120,11 @@ app.get('/', (req, res) => {
       test: '/api/translation/test',
       languages: '/api/translation/languages',
       chatflows: '/api/translation/chatflows',
+      textToSpeech: '/api/translation/text-to-speech',
+      translateAndSpeak: '/api/translation/translate-and-speak',
+      audioTranslateSpeak: '/api/translation/audio-translate-speak',
+      voices: '/api/translation/voices',
+      ttsLanguages: '/api/translation/tts-languages',
 
       // Transportation
       transportation: '/api/transportation',
@@ -122,6 +173,26 @@ app.get('/', (req, res) => {
           chatflowId: 'your-chatflow-id-here',
         },
       },
+      textToSpeech: {
+        method: 'POST',
+        url: '/api/translation/text-to-speech',
+        body: {
+          text: 'Hello, this is a test of text-to-speech!',
+          languageCode: 'en-US',
+          audioFormat: 'mp3',
+        },
+      },
+      translateAndSpeak: {
+        method: 'POST',
+        url: '/api/translation/translate-and-speak',
+        body: {
+          message: 'Hello, how are you?',
+          sourceLanguage: 'en',
+          targetLanguage: 'es',
+          chatflowId: 'your-chatflow-id-here',
+          audioFormat: 'mp3',
+        },
+      },
       recommendations: {
         method: 'POST',
         url: '/api/recommendations/test',
@@ -154,7 +225,6 @@ app.get('/', (req, res) => {
 });
 
 /* ------------------------------ 404 Handler ------------------------------- */
-
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
@@ -167,6 +237,11 @@ app.use('*', (req, res) => {
       'POST /api/translation/test',
       'GET /api/translation/languages',
       'GET /api/translation/chatflows',
+      'POST /api/translation/text-to-speech',
+      'POST /api/translation/translate-and-speak',
+      'POST /api/translation/audio-translate-speak',
+      'GET /api/translation/voices',
+      'GET /api/translation/tts-languages',
 
       // Transportation
       'POST /api/transportation/options',
@@ -191,7 +266,7 @@ app.use('*', (req, res) => {
       'GET /api/scam-prevention/red-flags',
       'GET /api/scam-prevention/health',
 
-      // Currency (methods mirrored from your snippet)
+      // Currency
       'POST /api/currency/convert',
       'POST /api/currency/exchange-rates',
       'GET /api/currency/info/:currency',
@@ -204,7 +279,6 @@ app.use('*', (req, res) => {
 });
 
 /* --------------------------- Error Handler (500) -------------------------- */
-
 app.use((error, req, res, next) => {
   console.error('Error:', error);
   res.status(500).json({
@@ -215,14 +289,29 @@ app.use((error, req, res, next) => {
 });
 
 /* --------------------------------- Start --------------------------------- */
-
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 AI Travel Assistant API running on port ${PORT}`);
   console.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 API available at: http://localhost:${PORT}/`);
   console.log(
     `🎯 New Features: Personalized Recommendations, Cultural Etiquette, Currency Conversion & Scam Prevention`
   );
+});
+
+// Handle port conflicts gracefully
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Please:`);
+    console.error(`   1. Kill the process using port ${PORT}:`);
+    console.error(`      Windows: netstat -ano | findstr :${PORT}`);
+    console.error(`      Then: taskkill /PID <PID> /F`);
+    console.error(`   2. Or use a different port by setting PORT environment variable`);
+    console.error(`      Example: PORT=3001 npm start`);
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', err);
+    process.exit(1);
+  }
 });
 
 module.exports = app;
