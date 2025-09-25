@@ -37,6 +37,35 @@ class RecommendationsService {
       return <String, dynamic>{'success': false, 'message': 'HTTP ${res.statusCode}'};
     }
   }
+
+  Future<Map<String, dynamic>> getCulturalEtiquette({
+    required String location,
+    required String chatflowId,
+    List<String>? specificTopics,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/recommendations/cultural-etiquette');
+    final payload = <String, dynamic>{
+      'location': location,
+      'chatflowId': chatflowId,
+      'specificTopics': specificTopics ?? <String>[],
+    };
+    final res = await _client.post(
+      uri,
+      headers: <String, String>{'Content-Type': 'application/json'},
+      body: json.encode(payload),
+    );
+
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return json.decode(res.body) as Map<String, dynamic>;
+    }
+    try {
+      final Map<String, dynamic> body = json.decode(res.body) as Map<String, dynamic>;
+      final String message = body['message']?.toString() ?? 'Request failed';
+      return <String, dynamic>{'success': false, 'message': message};
+    } catch (_) {
+      return <String, dynamic>{'success': false, 'message': 'HTTP ${res.statusCode}'};
+    }
+  }
 }
 
 

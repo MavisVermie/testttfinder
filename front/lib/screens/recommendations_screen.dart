@@ -21,6 +21,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
 
   // Chat history (dynamic, filled by user/AI messages)
   List<Map<String, String>> _messages = [];
+  
+  // Cultural etiquette data
+  Map<String, dynamic>? _culturalEtiquette;
+  bool _isLoadingEtiquette = false;
+  String? _currentCity;
 
   @override
   void initState() {
@@ -131,6 +136,8 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
         });
         // Save chat history after AI response
         _saveChatHistory();
+        // Fetch cultural etiquette if a city was mentioned
+        _fetchCulturalEtiquette();
       } else {
         final message = result['message']?.toString() ?? 
                        result['error']?.toString() ?? 
@@ -168,16 +175,138 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     });
   }
 
+  void _clearChat() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Clear Chat',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          content: Text(
+            'Are you sure you want to clear all messages? This action cannot be undone.',
+            style: GoogleFonts.inter(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _messages.clear();
+                  _culturalEtiquette = null;
+                  _currentCity = null;
+                });
+                _saveChatHistory();
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Clear',
+                style: GoogleFonts.inter(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Extract city name from user messages
+  String? _extractCityFromMessages() {
+    for (final message in _messages.reversed) {
+      if (message['role'] == 'user') {
+        final text = message['text']?.toLowerCase() ?? '';
+        // Look for common city patterns
+        final cityPatterns = [
+          RegExp(r'\b(?:in|visit|going to|traveling to|trip to)\s+([a-zA-Z\s]+?)(?:\s|$|,|\.)'),
+          RegExp(r'\b([a-zA-Z\s]+?)\s+(?:city|town|place)'),
+        ];
+        
+        for (final pattern in cityPatterns) {
+          final match = pattern.firstMatch(text);
+          if (match != null) {
+            final city = match.group(1)?.trim();
+            if (city != null && city.length > 2) {
+              return city;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // Fetch cultural etiquette for the current city
+  Future<void> _fetchCulturalEtiquette() async {
+    final city = _extractCityFromMessages();
+    if (city == null || city == _currentCity) return;
+
+    setState(() {
+      _isLoadingEtiquette = true;
+      _currentCity = city;
+    });
+
+    try {
+      const chatflowId = '32547d3e-ba39-4604-a904-da0c516e17b1'; // Using same chatflow for now
+      final result = await _service.getCulturalEtiquette(
+        location: city,
+        chatflowId: chatflowId,
+        specificTopics: ['dos and donts', 'etiquette', 'cultural norms'],
+      );
+
+      if (mounted && result['success'] == true) {
+        setState(() {
+          _culturalEtiquette = result['data'];
+          _isLoadingEtiquette = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingEtiquette = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingEtiquette = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: AppTheme.darkBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.textPrimary,
         centerTitle: true,
         elevation: 0,
-        toolbarHeight: 44,
+        toolbarHeight: 60,
+        title: Text(
+          'Recommendation Chat',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        actions: [
+          IconButton(
+            onPressed: _clearChat,
+            icon: Icon(
+              Icons.delete_outline,
+              color: AppTheme.textPrimary,
+            ),
+            tooltip: 'Clear Chat',
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -204,8 +333,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Chat area only
+                  // Chat area
                   Expanded(
+                    flex: 2,
                     child: Card(
                       elevation: 6,
                       shape: RoundedRectangleBorder(
@@ -248,6 +378,13 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   ),
 
                   const SizedBox(height: 12),
+
+                  // Do's and Don'ts section
+                  if (_culturalEtiquette != null || _isLoadingEtiquette)
+                    Expanded(
+                      flex: 1,
+                      child: _buildDosAndDontsSection(),
+                    ),
                 ],
               ),
             ),
@@ -261,12 +398,15 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
+            child: TextFormField(
               controller: _messageController,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
+              textInputAction: TextInputAction.newline,
+              onFieldSubmitted: (_) => _sendMessage(),
+              maxLines: 5,
+              minLines: 1,
               decoration: InputDecoration(
                 hintText: 'Ask for places, plans, or tips…',
                 hintStyle: GoogleFonts.inter(fontSize: 14),
@@ -437,6 +577,96 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
   }
 
   // Removed mock Do & Don't card and bullets
+
+  Widget _buildDosAndDontsSection() {
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.lightbulb_outline,
+                  color: AppTheme.primaryOrange,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Do\'s & Don\'ts for $_currentCity',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_isLoadingEtiquette)
+              const Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.primaryOrange,
+                ),
+              )
+            else if (_culturalEtiquette != null)
+              Expanded(
+                child: _buildDosAndDontsContent(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDosAndDontsContent() {
+    final etiquette = _culturalEtiquette?['culturalEtiquette'];
+    if (etiquette == null) return const SizedBox();
+
+    // Try to extract dos and donts from the response
+    String dosAndDontsText = '';
+    if (etiquette is Map<String, dynamic>) {
+      dosAndDontsText = etiquette['rawResponse']?.toString() ?? 
+                       etiquette['content']?.toString() ?? 
+                       etiquette['text']?.toString() ?? 
+                       etiquette.toString();
+    } else if (etiquette is String) {
+      dosAndDontsText = etiquette;
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (dosAndDontsText.isNotEmpty)
+            TextFormatter.createFormattedText(
+              dosAndDontsText,
+              textColor: AppTheme.textPrimary,
+              fontSize: 14,
+              textAlign: TextAlign.left,
+            )
+          else
+            Text(
+              'Cultural etiquette information will appear here when you mention a city in your conversation.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _blob(double size, Color color) {
     return Container(
