@@ -15,8 +15,14 @@ class RecommendationsService {
   }) async {
     final uri = Uri.parse('$_baseUrl/api/recommendations/personalized');
     final payload = <String, dynamic>{
-      'userMessage': userMessage,
+      'location': userMessage, // Use userMessage as location for now
       'chatflowId': chatflowId,
+      'interests': <String>[],
+      'budget': 'medium',
+      'preferences': <String, dynamic>{},
+      'duration': '1 week',
+      'travelStyle': 'tourist',
+      'dietaryRestrictions': <String>[],
     };
     final res = await _client.post(
       uri,

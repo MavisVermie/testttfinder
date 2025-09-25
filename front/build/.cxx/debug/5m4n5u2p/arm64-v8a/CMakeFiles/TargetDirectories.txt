@@ -1,2 +1,0 @@
-C:/Users/Mavis/testttfinder/front/build/.cxx/debug/5m4n5u2p/arm64-v8a/CMakeFiles/edit_cache.dir
-C:/Users/Mavis/testttfinder/front/build/.cxx/debug/5m4n5u2p/arm64-v8a/CMakeFiles/rebuild_cache.dir
