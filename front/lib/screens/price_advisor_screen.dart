@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../services/price_advisor_service.dart';
 import '../config/api_config.dart';
 import '../utils/text_formatter.dart';
+import '../theme/app_theme.dart';
 
 class PriceAdvisorScreen extends StatefulWidget {
   const PriceAdvisorScreen({super.key});
@@ -70,7 +71,7 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accentOrange = const Color(0xFFFC9D23);
+    final Color accentOrange = AppTheme.primaryOrange;
     final Color accentBlue = const Color(0xFF1C2F69);
 
     return Scaffold(
@@ -199,6 +200,90 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
                           ),
+                          const SizedBox(height: 20),
+
+                          // Don't know the name section
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.lightBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.lightBlue.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.help_outline,
+                                      color: AppTheme.primaryBlue,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "Don't know the name of the item?",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppTheme.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  "Take a picture of it or scan the barcode",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      // TODO: Implement camera functionality
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Camera feature coming soon!'),
+                                          backgroundColor: AppTheme.primaryOrange,
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.camera_alt,
+                                      color: AppTheme.primaryBlue,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      'Take Picture / Scan Barcode',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppTheme.primaryBlue,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      side: BorderSide(
+                                        color: AppTheme.primaryBlue.withOpacity(0.5),
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 24),
 
                           // Check Price Button
@@ -266,13 +351,13 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Colors.green[50],
+                                  color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.green[200]!),
+                                  border: Border.all(color: AppTheme.primaryOrange!),
                                 ),
                                 child: TextFormatter.createFormattedText(
                                   _priceAdvice!,
-                                  textColor: Colors.green[800]!,
+                                  textColor: AppTheme.primaryOrange!,
                                   fontSize: 14,
                                   textAlign: TextAlign.left,
                                 ),

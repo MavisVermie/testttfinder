@@ -89,45 +89,6 @@ class _LandingScreenState extends State<LandingScreen>
             child: SafeArea(
               child: Column(
                 children: [
-                  // Status bar area
-                  Container(
-                    height: 20,
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '9:41',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.signal_cellular_4_bar,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.wifi,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.battery_full,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
                   
                   const Spacer(),
                   
