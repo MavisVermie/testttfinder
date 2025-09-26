@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
 
 class CurrencyConverterScreen extends StatefulWidget {
@@ -16,26 +18,82 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
   String _toCurrency = 'EUR';
   double _exchangeRate = 0.85;
   double _convertedAmount = 0.0;
+  bool _isLoading = true;
+  String _lastUpdated = '';
+  Map<String, double> _liveRates = {};
 
-  // Sample currency data with flags
+  // Currency data with flags and names
   final List<Currency> _currencies = [
-    Currency(code: 'USD', name: 'US Dollar', flag: '🇺🇸', rate: 1.0),
-    Currency(code: 'EUR', name: 'Euro', flag: '🇪🇺', rate: 0.85),
-    Currency(code: 'GBP', name: 'British Pound', flag: '🇬🇧', rate: 0.73),
-    Currency(code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵', rate: 110.0),
-    Currency(code: 'SAR', name: 'Saudi Riyal', flag: '🇸🇦', rate: 3.75),
-    Currency(code: 'JOD', name: 'Jordanian Dinar', flag: '🇯🇴', rate: 0.71),
-    Currency(code: 'AED', name: 'UAE Dirham', flag: '🇦🇪', rate: 3.67),
-    Currency(code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦', rate: 1.25),
-    Currency(code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺', rate: 1.35),
-    Currency(code: 'CHF', name: 'Swiss Franc', flag: '🇨🇭', rate: 0.92),
+    // Major Currencies
+    Currency(code: 'USD', name: 'US Dollar', flag: '🇺🇸'),
+    Currency(code: 'EUR', name: 'Euro', flag: '🇪🇺'),
+    Currency(code: 'GBP', name: 'British Pound', flag: '🇬🇧'),
+    Currency(code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵'),
+    Currency(code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳'),
+    Currency(code: 'CHF', name: 'Swiss Franc', flag: '🇨🇭'),
+    Currency(code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦'),
+    Currency(code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺'),
+    Currency(code: 'NZD', name: 'New Zealand Dollar', flag: '🇳🇿'),
+    
+    // Asian Currencies
+    Currency(code: 'INR', name: 'Indian Rupee', flag: '🇮🇳'),
+    Currency(code: 'KRW', name: 'South Korean Won', flag: '🇰🇷'),
+    Currency(code: 'SGD', name: 'Singapore Dollar', flag: '🇸🇬'),
+    Currency(code: 'HKD', name: 'Hong Kong Dollar', flag: '🇭🇰'),
+    Currency(code: 'TWD', name: 'Taiwan Dollar', flag: '🇹🇼'),
+    Currency(code: 'THB', name: 'Thai Baht', flag: '🇹🇭'),
+    Currency(code: 'MYR', name: 'Malaysian Ringgit', flag: '🇲🇾'),
+    Currency(code: 'IDR', name: 'Indonesian Rupiah', flag: '🇮🇩'),
+    Currency(code: 'PHP', name: 'Philippine Peso', flag: '🇵🇭'),
+    Currency(code: 'VND', name: 'Vietnamese Dong', flag: '🇻🇳'),
+    
+    // Middle East & Africa
+    Currency(code: 'SAR', name: 'Saudi Riyal', flag: '🇸🇦'),
+    Currency(code: 'AED', name: 'UAE Dirham', flag: '🇦🇪'),
+    Currency(code: 'JOD', name: 'Jordanian Dinar', flag: '🇯🇴'),
+    Currency(code: 'QAR', name: 'Qatari Riyal', flag: '🇶🇦'),
+    Currency(code: 'KWD', name: 'Kuwaiti Dinar', flag: '🇰🇼'),
+    Currency(code: 'BHD', name: 'Bahraini Dinar', flag: '🇧🇭'),
+    Currency(code: 'OMR', name: 'Omani Rial', flag: '🇴🇲'),
+    Currency(code: 'ILS', name: 'Israeli Shekel', flag: '🇮🇱'),
+    Currency(code: 'TRY', name: 'Turkish Lira', flag: '🇹🇷'),
+    Currency(code: 'EGP', name: 'Egyptian Pound', flag: '🇪🇬'),
+    Currency(code: 'ZAR', name: 'South African Rand', flag: '🇿🇦'),
+    Currency(code: 'NGN', name: 'Nigerian Naira', flag: '🇳🇬'),
+    Currency(code: 'KES', name: 'Kenyan Shilling', flag: '🇰🇪'),
+    
+    // European Currencies
+    Currency(code: 'NOK', name: 'Norwegian Krone', flag: '🇳🇴'),
+    Currency(code: 'SEK', name: 'Swedish Krona', flag: '🇸🇪'),
+    Currency(code: 'DKK', name: 'Danish Krone', flag: '🇩🇰'),
+    Currency(code: 'PLN', name: 'Polish Zloty', flag: '🇵🇱'),
+    Currency(code: 'CZK', name: 'Czech Koruna', flag: '🇨🇿'),
+    Currency(code: 'HUF', name: 'Hungarian Forint', flag: '🇭🇺'),
+    Currency(code: 'RON', name: 'Romanian Leu', flag: '🇷🇴'),
+    Currency(code: 'BGN', name: 'Bulgarian Lev', flag: '🇧🇬'),
+    Currency(code: 'HRK', name: 'Croatian Kuna', flag: '🇭🇷'),
+    Currency(code: 'RUB', name: 'Russian Ruble', flag: '🇷🇺'),
+    
+    // Americas
+    Currency(code: 'BRL', name: 'Brazilian Real', flag: '🇧🇷'),
+    Currency(code: 'MXN', name: 'Mexican Peso', flag: '🇲🇽'),
+    Currency(code: 'ARS', name: 'Argentine Peso', flag: '🇦🇷'),
+    Currency(code: 'CLP', name: 'Chilean Peso', flag: '🇨🇱'),
+    Currency(code: 'COP', name: 'Colombian Peso', flag: '🇨🇴'),
+    Currency(code: 'PEN', name: 'Peruvian Sol', flag: '🇵🇪'),
+    Currency(code: 'UYU', name: 'Uruguayan Peso', flag: '🇺🇾'),
+    
   ];
+
+  // API Configuration
+  static const String _apiKey = 'cur_live_xB2hINulGFCnXj2X67BY6qBLlRPDD6FIVMdeXjCD';
+  static const String _baseUrl = 'https://api.currencyapi.com/v3/latest';
 
   @override
   void initState() {
     super.initState();
     _amountController.text = '1000';
-    _convertCurrency();
+    _fetchLiveRates();
     _amountController.addListener(_convertCurrency);
   }
 
@@ -43,6 +101,53 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
   void dispose() {
     _amountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchLiveRates() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      final url = Uri.parse('$_baseUrl?apikey=$_apiKey');
+      print('🔄 Fetching live rates from: $url');
+      
+      final response = await http.get(url);
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('✅ Live rates fetched successfully');
+        
+        if (data['data'] != null) {
+          final rates = data['data'] as Map<String, dynamic>;
+          final Map<String, double> liveRates = {};
+          
+          rates.forEach((key, value) {
+            if (value is Map && value['value'] != null) {
+              liveRates[key] = (value['value'] as num).toDouble();
+            }
+          });
+          
+          setState(() {
+            _liveRates = liveRates;
+            _isLoading = false;
+            _lastUpdated = data['meta']?['last_updated_at'] ?? 'Unknown';
+            _convertCurrency();
+          });
+          
+          print('🎯 Loaded ${liveRates.length} currency rates');
+        } else {
+          throw Exception('No data received from API');
+        }
+      } else {
+        throw Exception('Failed to load rates: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error fetching live rates: $e');
+      setState(() {
+        _isLoading = false;
+        _showErrorSnackBar('Failed to load live rates. Using default rates.');
+      });
+      _convertCurrency(); // Use default rates
+    }
   }
 
   void _convertCurrency() {
@@ -53,14 +158,84 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
 
     final amount =
         double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
-    final fromRate =
-        _currencies.firstWhere((c) => c.code == _fromCurrency).rate;
-    final toRate = _currencies.firstWhere((c) => c.code == _toCurrency).rate;
+    
+    // Use live rates if available, otherwise fallback to default
+    double fromRate = 1.0;
+    double toRate = 1.0;
+    
+    if (_liveRates.isNotEmpty) {
+      fromRate = _liveRates[_fromCurrency] ?? 1.0;
+      toRate = _liveRates[_toCurrency] ?? 1.0;
+    } else {
+      // Fallback rates (USD based)
+      final fallbackRates = {
+        'USD': 1.0,
+        'EUR': 0.857,
+        'GBP': 0.750,
+        'JPY': 149.88,
+        'CNY': 7.135,
+        'SAR': 3.748,
+        'JOD': 0.71,
+        'AED': 3.672,
+        'CAD': 1.394,
+        'AUD': 1.530,
+        'CHF': 0.800,
+        'INR': 88.71,
+        'KRW': 1408.96,
+        'SGD': 1.294,
+        'HKD': 7.782,
+        'TWD': 30.60,
+        'THB': 32.18,
+        'MYR': 4.216,
+        'IDR': 16738.41,
+        'PHP': 58.09,
+        'VND': 26384.90,
+        'QAR': 3.640,
+        'KWD': 0.306,
+        'BHD': 0.376,
+        'OMR': 0.384,
+        'ILS': 3.354,
+        'TRY': 41.55,
+        'EGP': 48.14,
+        'ZAR': 17.43,
+        'NGN': 1487.05,
+        'KES': 129.33,
+        'NOK': 10.03,
+        'SEK': 9.462,
+        'DKK': 6.400,
+        'PLN': 3.660,
+        'CZK': 20.83,
+        'HUF': 335.49,
+        'RON': 4.353,
+        'BGN': 1.665,
+        'HRK': 6.348,
+        'RUB': 84.11,
+        'BRL': 5.366,
+        'MXN': 18.48,
+        'ARS': 1337.57,
+        'CLP': 960.52,
+        'COP': 3903.70,
+        'PEN': 3.504,
+        'UYU': 39.94,
+      };
+      fromRate = fallbackRates[_fromCurrency] ?? 1.0;
+      toRate = fallbackRates[_toCurrency] ?? 1.0;
+    }
 
     setState(() {
       _exchangeRate = toRate / fromRate;
       _convertedAmount = amount * _exchangeRate;
     });
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _swapCurrencies() {
@@ -241,10 +416,10 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
                 ),
               ),
               Text(
-                'Live exchange rates',
+                _isLoading ? 'Loading live rates...' : 'Live exchange rates',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: AppTheme.textSecondary,
+                  color: _isLoading ? AppTheme.primaryOrange : AppTheme.textSecondary,
                 ),
               ),
             ],
@@ -312,6 +487,22 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
                   ),
                 ),
               ),
+              const Spacer(),
+              GestureDetector(
+                onTap: _fetchLiveRates,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.refresh,
+                    size: 16,
+                    color: AppTheme.primaryOrange,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -323,9 +514,39 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
               color: AppTheme.textPrimary,
             ),
           ),
+          if (_lastUpdated.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Last updated: ${_formatLastUpdated(_lastUpdated)}',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  String _formatLastUpdated(String lastUpdated) {
+    try {
+      final dateTime = DateTime.parse(lastUpdated);
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+      
+      if (difference.inMinutes < 1) {
+        return 'Just now';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes}m ago';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours}h ago';
+      } else {
+        return '${difference.inDays}d ago';
+      }
+    } catch (e) {
+      return 'Unknown';
+    }
   }
 
   Widget _buildConverterCard() {
@@ -500,7 +721,7 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
   }
 
   Widget _buildPopularRates() {
-    final popularCurrencies = ['EUR', 'GBP', 'JPY', 'SAR'];
+    final popularCurrencies = ['EUR', 'GBP', 'JPY', 'CNY', 'SAR', 'AED', 'INR', 'KRW'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -518,8 +739,30 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
           if (code == _fromCurrency) return const SizedBox.shrink();
 
           final currency = _currencies.firstWhere((c) => c.code == code);
-          final rate = currency.rate /
-              _currencies.firstWhere((c) => c.code == _fromCurrency).rate;
+          
+          // Calculate rate using live data or fallback
+          double rate = 1.0;
+          if (_liveRates.isNotEmpty) {
+            final fromRate = _liveRates[_fromCurrency] ?? 1.0;
+            final toRate = _liveRates[code] ?? 1.0;
+            rate = toRate / fromRate;
+          } else {
+            // Fallback calculation
+            final fallbackRates = {
+              'USD': 1.0,
+              'EUR': 0.857,
+              'GBP': 0.750,
+              'JPY': 149.88,
+              'CNY': 7.135,
+              'SAR': 3.748,
+              'AED': 3.672,
+              'INR': 88.71,
+              'KRW': 1408.96,
+            };
+            final fromRate = fallbackRates[_fromCurrency] ?? 1.0;
+            final toRate = fallbackRates[code] ?? 1.0;
+            rate = toRate / fromRate;
+          }
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -608,7 +851,7 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Exchange rates update every minute',
+                  'Live rates from CurrencyAPI',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -617,7 +860,7 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Rates are for informational purposes only',
+                  'Rates update in real-time. For informational purposes only.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
@@ -683,12 +926,10 @@ class Currency {
   final String code;
   final String name;
   final String flag;
-  final double rate;
 
   Currency({
     required this.code,
     required this.name,
     required this.flag,
-    required this.rate,
   });
 }

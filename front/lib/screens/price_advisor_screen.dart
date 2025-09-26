@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/price_advisor_service.dart';
 import '../config/api_config.dart';
+import '../utils/text_formatter.dart';
 
 class PriceAdvisorScreen extends StatefulWidget {
   const PriceAdvisorScreen({super.key});
@@ -269,13 +270,11 @@ class _PriceAdvisorScreenState extends State<PriceAdvisorScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.green[200]!),
                                 ),
-                                child: Text(
+                                child: TextFormatter.createFormattedText(
                                   _priceAdvice!,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.green[800],
-                                    height: 1.5,
-                                  ),
+                                  textColor: Colors.green[800]!,
+                                  fontSize: 14,
+                                  textAlign: TextAlign.left,
                                 ),
                               ),
                             ],

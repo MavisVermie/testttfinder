@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/rating_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -83,6 +84,79 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Navigate to feature and track usage
+  void _navigateToFeature(_Feature feature) async {
+    // Track feature usage
+    await RatingService.trackFeatureUsage(feature.title);
+    
+    // Navigate to feature
+    await Navigator.pushNamed(context, feature.route);
+    
+    // Always check if we should show rating prompt when returning
+    await _checkAndShowRatingPrompt();
+  }
+
+  /// Check if rating prompt should be shown and show it
+  Future<void> _checkAndShowRatingPrompt() async {
+    print('🔍 Checking if rating prompt should show...');
+    final shouldShow = await RatingService.shouldShowRatingPrompt();
+    print('📋 Should show rating prompt: $shouldShow');
+    
+    if (shouldShow && mounted) {
+      print('✅ Showing rating dialog!');
+      await RatingService.markRatingPrompted();
+      _showRatingDialog();
+    } else {
+      print('❌ Not showing rating prompt (shouldShow: $shouldShow, mounted: $mounted)');
+    }
+  }
+
+  /// Show rating dialog
+  void _showRatingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.star, color: AppTheme.primaryOrange),
+              const SizedBox(width: 8),
+              const Text('Rate Us'),
+            ],
+          ),
+          content: const Text(
+            'How was your experience using our app? Your feedback helps us improve!',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Maybe Later'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/rating');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryOrange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Rate Now'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -121,8 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildFeatureHeader(),
                   const SizedBox(height: 12),
                   _buildFeatureGrid(),
-                  const SizedBox(height: 24),
-                  _buildInspirationStrip(),
                 ],
               ),
             ),
@@ -192,10 +264,25 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppTheme.primaryOrange,
-            child: const Icon(Icons.explore, color: Colors.white),
+          Row(
+            children: [
+              // Test rating button (for debugging)
+              IconButton(
+                onPressed: () async {
+                  print('🧪 Testing rating system...');
+                  await RatingService.resetRatingData();
+                  await RatingService.trackFeatureUsage('Test Feature');
+                  await _checkAndShowRatingPrompt();
+                },
+                icon: const Icon(Icons.star, color: AppTheme.primaryOrange, size: 32),
+                tooltip: 'Test Rating System',
+              ),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppTheme.primaryOrange,
+                child: const Icon(Icons.explore, color: Colors.white),
+              ),
+            ],
           ),
         ],
       ),
@@ -237,17 +324,53 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // Title only (search bar removed)
+            // Quote of the day overlay
             Positioned(
               left: 16,
+              right: 16,
               bottom: 16,
-              child: Text(
-                'Explore the world',
-                style: GoogleFonts.playfairDisplay(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.format_quote,
+                        color: Colors.white.withOpacity(0.9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Quote of the Day',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '"The world is a book and those who do not travel read only one page."',
+                    style: GoogleFonts.playfairDisplay(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '- Saint Augustine',
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -304,7 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _featureButton(_Feature f) {
     return InkWell(
-      onTap: () => Navigator.pushNamed(context, f.route),
+      onTap: () => _navigateToFeature(f),
       borderRadius: BorderRadius.circular(18),
       child: Ink(
         decoration: BoxDecoration(
@@ -373,72 +496,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildInspirationStrip() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryBlue.withOpacity(0.1),
-              AppTheme.primaryOrange.withOpacity(0.1),
-            ],
-          ),
-          border: Border.all(
-            color: AppTheme.primaryBlue.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.format_quote,
-                  color: AppTheme.primaryBlue,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Quote of the Day',
-                  style: GoogleFonts.inter(
-                    color: AppTheme.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '"The world is a book and those who do not travel read only one page."',
-              style: GoogleFonts.playfairDisplay(
-                color: AppTheme.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                fontStyle: FontStyle.italic,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '- Saint Augustine',
-              style: GoogleFonts.inter(
-                color: AppTheme.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _blob(double size, Color color) {
     return Container(
@@ -474,9 +531,87 @@ class _Feature {
   });
 }
 
-class AllFeaturesScreen extends StatelessWidget {
+class AllFeaturesScreen extends StatefulWidget {
   final List<_Feature> features;
   const AllFeaturesScreen({super.key, required this.features});
+
+  @override
+  State<AllFeaturesScreen> createState() => _AllFeaturesScreenState();
+}
+
+class _AllFeaturesScreenState extends State<AllFeaturesScreen> {
+  /// Navigate to feature and track usage
+  void _navigateToFeature(_Feature feature) async {
+    // Track feature usage
+    await RatingService.trackFeatureUsage(feature.title);
+    
+    // Navigate to feature
+    await Navigator.pushNamed(context, feature.route);
+    
+    // Always check if we should show rating prompt when returning
+    await _checkAndShowRatingPrompt();
+  }
+
+  /// Check if rating prompt should be shown and show it
+  Future<void> _checkAndShowRatingPrompt() async {
+    print('🔍 Checking if rating prompt should show...');
+    final shouldShow = await RatingService.shouldShowRatingPrompt();
+    print('📋 Should show rating prompt: $shouldShow');
+    
+    if (shouldShow && mounted) {
+      print('✅ Showing rating dialog!');
+      await RatingService.markRatingPrompted();
+      _showRatingDialog();
+    } else {
+      print('❌ Not showing rating prompt (shouldShow: $shouldShow, mounted: $mounted)');
+    }
+  }
+
+  /// Show rating dialog
+  void _showRatingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.star, color: AppTheme.primaryOrange),
+              const SizedBox(width: 8),
+              const Text('Rate Us'),
+            ],
+          ),
+          content: const Text(
+            'How was your experience using our app? Your feedback helps us improve!',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Maybe Later'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/rating');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryOrange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Rate Now'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -487,10 +622,10 @@ class AllFeaturesScreen extends StatelessWidget {
       ),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: features.length,
+        itemCount: widget.features.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final f = features[index];
+          final f = widget.features[index];
           return ListTile(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -502,7 +637,7 @@ class AllFeaturesScreen extends StatelessWidget {
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
             subtitle: Text(f.subtitle),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.pushNamed(context, f.route),
+            onTap: () => _navigateToFeature(f),
           );
         },
       ),

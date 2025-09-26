@@ -3,7 +3,7 @@ const axios = require('axios');
 class TransportationService {
   constructor(useMock = false) {
     this.useMock = useMock; // إذا true → يستخدم بيانات وهمية
-    this.googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+    this.googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
 
     // Mock Data
     this.mockTransportationData = {
@@ -41,6 +41,9 @@ class TransportationService {
 
     // Live Mode - Use Google Directions API
     try {
+      // Map our mode to Google Maps mode
+      const googleMode = mode === 'transit' ? 'transit' : 'transit'; // Always use transit for public transport
+      
       const response = await axios.get(
         'https://maps.googleapis.com/maps/api/directions/json',
         {
@@ -48,7 +51,7 @@ class TransportationService {
             origin: from,
             destination: to,
             key: this.googleMapsApiKey,
-            mode: 'transit'
+            mode: googleMode
           }
         }
       );
@@ -227,7 +230,7 @@ class TransportationService {
    * Get nearby transportation options
    */
   async getNearbyTransportation({ latitude, longitude, radius, transportType }) {
-    if (this.useMock) {
+    if (this.useMock || !this.googleMapsApiKey) {
       return {
         success: true,
         data: {
@@ -237,7 +240,7 @@ class TransportationService {
           walkingDistances: this.getMockWalkingDistances(latitude, longitude),
           estimatedArrivals: this.getMockEstimatedArrivals(latitude, longitude)
         },
-        message: 'Nearby transportation options retrieved'
+        message: this.useMock ? 'Mock nearby transportation options retrieved' : 'Mock data (API key not configured)'
       };
     }
 
@@ -250,7 +253,19 @@ class TransportationService {
         message: 'Live nearby transportation data retrieved'
       };
     } catch (error) {
-      return { success: false, error: error.message, message: 'Failed to get nearby transportation' };
+      console.error('Live mode failed, falling back to mock data:', error.message);
+      // Fallback to mock data if live mode fails
+      return {
+        success: true,
+        data: {
+          location: { latitude, longitude, radius },
+          timestamp: new Date().toISOString(),
+          nearbyOptions: this.getMockNearbyTransport(latitude, longitude, radius, transportType),
+          walkingDistances: this.getMockWalkingDistances(latitude, longitude),
+          estimatedArrivals: this.getMockEstimatedArrivals(latitude, longitude)
+        },
+        message: 'Mock data (live mode failed)'
+      };
     }
   }
 
@@ -447,6 +462,11 @@ class TransportationService {
 
   async getLiveTransitData(latitude, longitude, radius) {
     try {
+      if (!this.googleMapsApiKey) {
+        console.error('Google Maps API key is not configured');
+        throw new Error('Google Maps API key is required for live transportation data');
+      }
+
       // Use Google Places API to find nearby transit stations
       const response = await axios.get(
         'https://maps.googleapis.com/maps/api/place/nearbysearch/json',
@@ -460,10 +480,18 @@ class TransportationService {
         }
       );
 
+      if (response.data.status === 'REQUEST_DENIED') {
+        throw new Error('Google Maps API request denied. Check API key and permissions.');
+      }
+
+      if (response.data.status === 'OVER_QUERY_LIMIT') {
+        throw new Error('Google Maps API quota exceeded');
+      }
+
       return this.formatTransitData(response.data.results);
     } catch (error) {
       console.error('Error getting live transit data:', error);
-      return { bus: [], metro: [] };
+      throw error; // Re-throw to be handled by calling method
     }
   }
 

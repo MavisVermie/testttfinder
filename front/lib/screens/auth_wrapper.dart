@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ai_tourist_guide/screens/login_screen.dart';
 import 'package:ai_tourist_guide/screens/home_screen.dart';
+import '../services/rating_service.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -27,6 +28,8 @@ class AuthWrapper extends StatelessWidget {
         // If user is signed in, show home screen
         if (snapshot.hasData) {
           print('AuthWrapper: Showing home screen for user: ${snapshot.data?.email}');
+          // Clear session data when user logs in (start fresh session)
+          RatingService.clearSession();
           return const HomeScreen();
         }
         
