@@ -9,7 +9,7 @@ const transportationService = new TransportationService(false); // Enable LIVE m
 const transportationOptionsSchema = Joi.object({
   from: Joi.string().min(1).max(200).required(),
   to: Joi.string().min(1).max(200).required(),
-  mode: Joi.string().valid('all', 'bus', 'metro').optional(),
+  mode: Joi.string().valid('all', 'bus', 'metro', 'transit').optional(),
   preferences: Joi.object({
     ecoFriendly: Joi.boolean().optional(),
     budget: Joi.number().min(0).optional(),
@@ -41,7 +41,7 @@ const locationBasedRealtimeSchema = Joi.object({
   longitude: Joi.number().min(-180).max(180).required(),
   radius: Joi.number().min(100).max(10000).optional().default(1000), // meters
   transportType: Joi.string().valid('all', 'bus', 'metro').optional()
-});
+}).options({ convert: true }); // This converts string numbers to actual numbers
 
 /**
  * POST /api/transportation/options
@@ -321,9 +321,14 @@ router.get('/location/realtime', async (req, res) => {
  */
 router.get('/location/nearby', async (req, res) => {
   try {
+    console.log('📍 Nearby transportation request received:');
+    console.log('Query params:', req.query);
+    console.log('Raw query string:', req.url);
+    
     const { error, value } = locationBasedRealtimeSchema.validate(req.query);
     
     if (error) {
+      console.log('❌ Validation error:', error.details);
       return res.status(400).json({
         success: false,
         error: 'Validation error',
@@ -377,7 +382,7 @@ router.get('/help', (req, res) => {
           parameters: {
             from: 'string (required) - Origin location',
             to: 'string (required) - Destination location',
-            mode: 'string (optional) - all, bus, metro',
+            mode: 'string (optional) - all, bus, metro, transit',
             preferences: 'object (optional) - ecoFriendly, budget, maxTime, accessibility'
           },
           example: {

@@ -15,6 +15,7 @@ import 'screens/login_screen.dart';
 import 'screens/auth_wrapper.dart';
 import 'screens/chat_list_screen.dart';
 import 'screens/edit_account_screen.dart';
+import 'screens/rating_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
         '/edit-account': (context) => const EditAccountScreen(),
         '/map-test': (context) => const MapTestScreen(),
         '/login': (context) => const TravelLoginPage(),
+        '/rating': (context) => const RatingScreen(),
       },
     );
   }
