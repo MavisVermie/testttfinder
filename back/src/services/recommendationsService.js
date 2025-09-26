@@ -6,40 +6,33 @@ class RecommendationsService {
   }
 
   /**
-   * Get personalized recommendations based on location, interests, budget, and preferences
+   * Get personalized recommendations based on user message and chat history
    * @param {Object} params - Recommendation parameters
-   * @param {string} params.location - Destination location
-   * @param {Array} params.interests - Array of interests (e.g., ['culture', 'food', 'adventure'])
-   * @param {string} params.budget - Budget range (e.g., 'low', 'medium', 'high', 'luxury')
-   * @param {Object} params.preferences - Additional preferences
-   * @param {string} params.duration - Trip duration (e.g., 'weekend', '1 week', '2 weeks')
-   * @param {string} params.travelStyle - Travel style (e.g., 'backpacker', 'family', 'business', 'luxury')
-   * @param {Array} params.dietaryRestrictions - Dietary restrictions
+   * @param {string} params.userMessage - User's message/query
    * @param {string} params.chatflowId - Flowise chatflow ID for recommendations
+   * @param {Array} params.chatHistory - Previous chat messages
    * @returns {Promise<Object>} - Personalized recommendations
    */
   async getPersonalizedRecommendations(params) {
     try {
       const {
-        location,
-        interests = [],
-        budget = 'medium',
-        preferences = {},
-        duration = '1 week',
-        travelStyle = 'tourist',
-        dietaryRestrictions = [],
-        chatflowId
+        userMessage,
+        chatflowId,
+        chatHistory = []
       } = params;
 
-      if (!location || !chatflowId) {
-        throw new Error('Location and chatflowId are required');
+      if (!userMessage || !chatflowId) {
+        throw new Error('userMessage and chatflowId are required');
       }
 
-      // Create a simple prompt for the Flowise agent (like translation API)
-      const simplePrompt = `Provide travel recommendations for ${location}. Interests: ${interests.join(', ') || 'general tourism'}. Budget: ${budget}. Duration: ${duration}. Travel style: ${travelStyle}.`;
+      // Prepare chat history for Flowise
+      const history = chatHistory.map(msg => ({
+        role: msg.role === 'user' ? 'userMessage' : 'apiMessage',
+        content: msg.text || msg.content || ''
+      }));
 
-      // Use FlowiseService to send the message, just like translation API does
-      const result = await this.flowiseService.sendChatMessage(simplePrompt, chatflowId, {});
+      // Use FlowiseService to send the user message with chat history
+      const result = await this.flowiseService.sendChatMessage(userMessage, chatflowId, { history });
       
       if (result.success) {
         return {
@@ -47,11 +40,8 @@ class RecommendationsService {
           data: {
             recommendations: this._parseRecommendationsResponse(result.data),
             metadata: {
-              location,
-              interests,
-              budget,
-              duration,
-              travelStyle,
+              userMessage,
+              chatHistoryLength: chatHistory.length,
               timestamp: new Date().toISOString()
             }
           },

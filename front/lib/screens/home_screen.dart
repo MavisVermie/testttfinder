@@ -293,20 +293,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeatureGrid() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _features.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 1.05,
-        ),
-        itemBuilder: (context, index) {
-          final f = _features[index];
-          return _featureButton(f);
-        },
+      child: Column(
+        children: _features.map((f) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _featureButton(f),
+        )).toList(),
       ),
     );
   }
@@ -336,8 +327,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
@@ -347,22 +337,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Icon(f.icon, color: Colors.white, size: 26),
               ),
-              const Spacer(),
-              Text(
-                f.title,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      f.title,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      f.subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                f.subtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                ),
+              const Icon(
+                Icons.chevron_right,
+                color: AppTheme.textSecondary,
+                size: 20,
               ),
             ],
           ),
