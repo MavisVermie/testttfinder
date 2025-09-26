@@ -15,7 +15,7 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white, // match homepage scaffold
       appBar: AppBar(
-        backgroundColor: accentOrange,
+        backgroundColor: AppTheme.darkBlue,
         title: const Text('Profile'),
       ),
       body: Stack(
@@ -237,7 +237,14 @@ class ProfileScreen extends StatelessWidget {
             onTap: () async {
               try {
                 await AuthService.signOut();
-                // AuthWrapper will automatically redirect to login screen
+                // Navigate to landing page after successful logout
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context, 
+                    '/landing', 
+                    (route) => false
+                  );
+                }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

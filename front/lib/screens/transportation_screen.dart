@@ -578,55 +578,10 @@ class _TransportationScreenState extends State<TransportationScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            // Back button
+            // Back button only
             _buildFloatingButton(
               icon: Icons.arrow_back,
               onTap: () => Navigator.pop(context),
-            ),
-            const SizedBox(width: 12),
-            // Search field
-            Expanded(
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search for places',
-                    hintStyle: GoogleFonts.roboto(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Colors.grey[600],
-                      size: 20,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Menu button
-            _buildFloatingButton(
-              icon: Icons.menu,
-              onTap: () => _showMenu(),
             ),
           ],
         ),
@@ -665,7 +620,7 @@ class _TransportationScreenState extends State<TransportationScreen> {
 
   Widget _buildSearchBar() {
     return Positioned(
-      top: 100,
+      top: 80,
       left: 16,
       right: 16,
       child: Container(

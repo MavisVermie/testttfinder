@@ -41,7 +41,7 @@ class _MatchScreenState extends State<MatchScreen> {
       'bio':
           'Passionate about art and culture. Always looking for hidden gems and authentic experiences.',
       'profileImage':
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1494790108755-2616b612b786?q=80&w=400&auto=format&fit=crop',
       'isOnline': true,
     },
     {
@@ -56,7 +56,7 @@ class _MatchScreenState extends State<MatchScreen> {
       'bio':
           'Tech enthusiast who loves hiking and discovering new music scenes in every city.',
       'profileImage':
-          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1494790108755-2616b612b786?q=80&w=400&auto=format&fit=crop',
       'isOnline': false,
     },
     {
@@ -71,7 +71,7 @@ class _MatchScreenState extends State<MatchScreen> {
       'bio':
           'Chef by profession, traveler by passion. Love exploring local markets and street food.',
       'profileImage':
-          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=400&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1494790108755-2616b612b786?q=80&w=400&auto=format&fit=crop',
       'isOnline': true,
     },
   ];

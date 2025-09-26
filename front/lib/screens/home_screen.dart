@@ -209,8 +209,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.pushNamed(context, '/chats');
           }
           if (index == 1) {
-            // Match button tapped -> navigate to recommendations as a placeholder
-            Navigator.pushNamed(context, '/recommendations');
+            // Match button tapped -> navigate to match screen
+            Navigator.pushNamed(context, '/match');
           } else if (index == 2) {
             // Profile button tapped -> navigate to profile screen
             Navigator.pushNamed(context, '/profile');

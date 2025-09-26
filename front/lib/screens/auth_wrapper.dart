@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ai_tourist_guide/screens/login_screen.dart';
 import 'package:ai_tourist_guide/screens/home_screen.dart';
+import 'package:ai_tourist_guide/screens/landing_screen.dart';
 import '../services/rating_service.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -33,9 +34,9 @@ class AuthWrapper extends StatelessWidget {
           return const HomeScreen();
         }
         
-        // If user is not signed in, show login screen
-        print('AuthWrapper: Showing login screen');
-        return const TravelLoginPage();
+        // If user is not signed in, show landing screen first
+        print('AuthWrapper: Showing landing screen');
+        return const LandingScreen();
       },
     );
   }

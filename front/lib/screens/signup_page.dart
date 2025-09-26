@@ -604,7 +604,7 @@ class _StepPassword extends StatelessWidget {
                   widthFactor: strength.clamp(0, 1),
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [kPrimary, Color(0xFFFFC36A)]),
+                      gradient: const LinearGradient(colors: [kPrimary, Color(0xFFFF8A65)]),
                     ),
                   ),
                 ),
@@ -759,7 +759,7 @@ class _PrimaryButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [kPrimary, Color(0xFFFFBE62)]),
+            gradient: const LinearGradient(colors: [kPrimary, Color(0xFFFF8A65)]),
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [BoxShadow(color: Color(0x33FC9D23), blurRadius: 18, offset: Offset(0, 10))],
           ),

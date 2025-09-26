@@ -82,13 +82,15 @@ class _TravelLoginPageState extends State<TravelLoginPage> {
           const SnackBar(
             content: Text('Welcome back!'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: Duration(seconds: 1),
           ),
         );
         
-        // Navigate to home
-        // Don't navigate manually - AuthWrapper will handle the redirect
-        // The AuthWrapper will automatically show the home screen when user is signed in
+        // Navigate to home screen after successful login
+        await Future.delayed(const Duration(milliseconds: 500)); // Small delay to show success message
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -136,13 +138,15 @@ class _TravelLoginPageState extends State<TravelLoginPage> {
           const SnackBar(
             content: Text('Welcome!'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: Duration(seconds: 1),
           ),
         );
         
-        // Navigate to home
-        // Don't navigate manually - AuthWrapper will handle the redirect
-        // The AuthWrapper will automatically show the home screen when user is signed in
+        // Navigate to home screen after successful Google sign-in
+        await Future.delayed(const Duration(milliseconds: 500)); // Small delay to show success message
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
     } catch (e) {
       if (!mounted) return;
