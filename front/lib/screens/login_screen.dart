@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ai_tourist_guide/screens/signup_page.dart';
 import 'package:ai_tourist_guide/services/auth_service.dart';
+import '../theme/app_theme.dart';
 
 class TravelLoginPage extends StatefulWidget {
   const TravelLoginPage({super.key});
@@ -14,7 +15,7 @@ class TravelLoginPage extends StatefulWidget {
 
 class _TravelLoginPageState extends State<TravelLoginPage> {
   // Brand colors
-  static const kPrimary = Color(0xFFFC9D23); // Orange
+  static const kPrimary = AppTheme.primaryOrange; // Orange
   static const kNavy = Color(0xFF1C2F69);    // Deep blue
 
   final _formKey = GlobalKey<FormState>();

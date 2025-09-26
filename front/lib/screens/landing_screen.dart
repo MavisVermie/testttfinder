@@ -243,14 +243,7 @@ class _LandingScreenState extends State<LandingScreen>
                           const SizedBox(height: 40),
                           
                           // Privacy Policy
-                          Text(
-                            'Privacy Policy',
-                            style: GoogleFonts.inter(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
+ 
                           
                           const SizedBox(height: 40),
                         ],
