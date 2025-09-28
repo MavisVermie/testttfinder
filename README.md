@@ -122,10 +122,6 @@ PathFinder AI supports multiple languages for seamless communication across diff
 
 We welcome contributions to make PathFinder AI even better! Whether it's adding new languages, improving AI recommendations, or enhancing the user experience, your input is valuable.
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ---
 
 **Happy Travels with PathFinder AI! 🌍✈️**
