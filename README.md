@@ -120,10 +120,10 @@ PathFinder AI supports multiple languages for seamless communication across diff
 
 ## 👥 Team GOOGLEISTS
 
-- **[Mohammad Al-Majali](https://github.com/MavisVermie)** - GitHub Profile
-- **[Marah Al-Qunbor](https://github.com/MarahYousef01/)** - GitHub Profile  
-- **Rama Al-Odat** - Team Member
-- **Mohammad Al-Ali** - Team Member
+- **[Mohammad Al-Majali](https://github.com/MavisVermie)** - Backend
+- **[Marah Al-Qunbor](https://github.com/MarahYousef01/)** - Backend
+- **Rama Al-Odat** - Frontend
+- **Mohammad Al-Ali** - Frontend
 
 ## 🤝 Contributing
 
