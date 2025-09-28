@@ -118,6 +118,13 @@ PathFinder AI supports multiple languages for seamless communication across diff
 - Android Studio/Android device (for mobile testing)
 - Google Cloud Platform account (for AI services)
 
+## 👥 Team GOOGLEISTS
+
+- **[Mohammad Al-Majali](https://github.com/MavisVermie)** - GitHub Profile
+- **[Marah Al-Qunbor](https://github.com/MarahYousef01/)** - GitHub Profile  
+- **Rama Al-Odat** - Team Member
+- **Mohammad Al-Ali** - Team Member
+
 ## 🤝 Contributing
 
 We welcome contributions to make PathFinder AI even better! Whether it's adding new languages, improving AI recommendations, or enhancing the user experience, your input is valuable.
